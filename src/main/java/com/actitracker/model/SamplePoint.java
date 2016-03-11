@@ -14,15 +14,18 @@ public class SamplePoint {
     double[] avgAbsDiff;
     double resultant;
     double avgTimePeak;
-    long start_timestamp;
+    double distance;
+    long startTimestamp;
 
-    public SamplePoint(String user_id, double[] mean, double[] variance, double[] avgAbsDiff, double resultant, double avgTimePeak) {
+    public SamplePoint(String user_id, double[] mean, double[] variance, double[] avgAbsDiff, double resultant, double avgTimePeak, double distance, long startTimestamp) {
         this.user_id = user_id;
         this.mean = mean;
         this.variance = variance;
         this.avgAbsDiff = avgAbsDiff;
         this.resultant = resultant;
         this.avgTimePeak = avgTimePeak;
+        this.distance = distance;
+        this.startTimestamp = startTimestamp;
     }
 
     public String getUser_id() {
@@ -73,6 +76,14 @@ public class SamplePoint {
         this.avgTimePeak = avgTimePeak;
     }
 
+    public long getStartTimestamp() {
+        return startTimestamp;
+    }
+
+    public void getStartTimestamp(long startTimestamp) {
+        this.startTimestamp = startTimestamp;
+    }
+
     public List<Double> getFeatures() {
         Double[] features = new Double[]{
                 mean[0],
@@ -85,7 +96,8 @@ public class SamplePoint {
                 avgAbsDiff[1],
                 avgAbsDiff[2],
                 resultant,
-                avgTimePeak
+                avgTimePeak,
+                distance
         };
         return new ArrayList<>(Arrays.asList(features));
     }

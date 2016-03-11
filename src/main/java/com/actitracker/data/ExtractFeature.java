@@ -6,6 +6,7 @@ import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.stat.MultivariateStatisticalSummary;
 import org.apache.spark.mllib.stat.Statistics;
+import scala.collection.immutable.Stream;
 
 /**
  * We use labeled accelerometer data from users thanks to a device in their pocket during different activities (walking, sitting, jogging, ascending stairs, descending stairs, and standing).
@@ -115,4 +116,9 @@ public class ExtractFeature {
     return 0.0;
   }
 
+  public static double computeDistanceTraveled(double acceleration) {
+    double result;
+    result = (Constants.gravity * acceleration * Constants.intervalSeconds) / (2 * Math.PI * Constants.frequency);
+    return result;
+  }
 }

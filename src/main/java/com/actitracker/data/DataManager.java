@@ -43,7 +43,10 @@ public class DataManager {
 
     public static void saveDataToMySQL(List<SamplePoint> sampleList) {
         Connection conn = getConnection();
-        String query = "INSERT INTO t_user_activity_features VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO t_user_activity_features\n" +
+                "(user_id, mean0, mean1, mean2, variance0, variance1, variance2, avgabsdiff0, avgabsdiff1, " +
+                "avgabsdiff2, resultant, avgtimepeak, distance, start_timestamp)" +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
             for(SamplePoint sample: sampleList) {
                 String user_id = sample.getUser_id();
@@ -53,16 +56,12 @@ public class DataManager {
                 for(int i=2; i <= features.size()+1; i++) {
                     stmt.setDouble(i, features.get(i-2));
                 }
+                stmt.setLong(features.size()+2, sample.getStartTimestamp());
                 stmt.execute();
             }
             conn.close();
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-    }
-
-    public static void main(String[] args) {
-        CalculateFeature.writeLastSeen(System.currentTimeMillis());
-        CalculateFeature.lastSeen();
     }
 }

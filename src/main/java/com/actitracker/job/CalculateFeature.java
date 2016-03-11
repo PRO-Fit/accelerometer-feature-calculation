@@ -1,5 +1,6 @@
 package com.actitracker.job;
 
+import com.actitracker.data.Constants;
 import com.actitracker.data.DataManager;
 import com.actitracker.data.ExtractFeature;
 import com.actitracker.data.PrepareData;
@@ -28,31 +29,33 @@ public class CalculateFeature {
     static String lastReadFile = "lastread";
 
     public static void main(String[] args) {
-
-        lastSeen();
-        writeLastSeen(System.currentTimeMillis());
-        lastSeen();
         // define Spark context
-        /*SparkConf sparkConf = new SparkConf()
+        SparkConf sparkConf = new SparkConf()
                 .setAppName("Activity classifier")
                 .set("spark.cassandra.connection.host", "127.0.0.1")
                 .setMaster("local[*]");
 
-        Logger.getLogger("org").setLevel(Level.DEBUG);
-        Logger.getLogger("akka").setLevel(Level.DEBUG);
+        Logger.getLogger("org").setLevel(Level.ERROR);
+        Logger.getLogger("akka").setLevel(Level.ERROR);
         Logger log = Logger.getLogger("org");
 
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
         // retrieve data from Cassandra and create an CassandraRDD
         CassandraJavaRDD<CassandraRow> cassandraRowsRDD = javaFunctions(sc).cassandraTable("accelerometer", "user_accel_data_test");
-        JavaRDD<String> users = cassandraRowsRDD.select("user_id").distinct().map(CassandraRow::toMap).map(entry -> entry.get("user_id").toString()).cache();
+        JavaRDD<String> users = cassandraRowsRDD.select("user_id")
+                .where("timestamp > ?", lastSeen())
+                .distinct()
+                .map(CassandraRow::toMap)
+                .map(entry -> entry.get("user_id").toString())
+                .cache();
+        writeLastSeen(System.currentTimeMillis());
 
         Set<String> user_ids = new HashSet<>(users.collect());
-        log.debug(">>>> total users: " + user_ids.size());
+        log.error(">>>> total users: " + user_ids.size());
         List<SamplePoint> sampleList = new ArrayList<>();
         for (String user_id : user_ids) {
-            log.debug("Processing user id: " + user_id);
+            log.error("Processing user id: " + user_id);
             // create bucket of sorted data by ascending timestamp by (user, activity)
             JavaRDD<Long> times = cassandraRowsRDD.select("timestamp")
                     .where("user_id=?", user_id)
@@ -64,7 +67,7 @@ public class CalculateFeature {
             JavaRDD<CassandraRow> dataTotal = cassandraRowsRDD.select("timestamp", "x", "y", "z")
                     .where("user_id=?", user_id)
                     .withAscOrder().cache();
-            log.debug(">> Data row count: " + times.count());
+            log.error(">> Data row count: " + times.count());
 
             // if data
 
@@ -76,7 +79,7 @@ public class CalculateFeature {
                 List<Long[]> intervals = PrepareData.defineWindows(times);
                 for (Long[] interval : intervals) {
 
-                    log.debug("Interval Start: " + interval[0] + ", Interval End: " + interval[1] + ", Number of windows: " + interval[2]);
+                    log.error("Interval Start: " + interval[0] + ", Interval End: " + interval[1] + ", Number of windows: " + interval[2]);
                     for (int j = 0; j <= interval[2]; j++) {
 
                         JavaRDD<CassandraRow> data = PrepareData.getDataIntervalData(dataTotal, interval[0], j);
@@ -93,6 +96,7 @@ public class CalculateFeature {
                             // extract features from this windows //
                             ////////////////////////////////////////
                             ExtractFeature extractFeature = new ExtractFeature(vectors);
+                            long startTime = interval[0] + j * Constants.interval;
 
                             // the average acceleration
                             double[] mean = extractFeature.computeAvgAcc();
@@ -109,7 +113,10 @@ public class CalculateFeature {
                             // the average time between peaks
                             double avgTimePeak = extractFeature.computeAvgTimeBetweenPeak(timestamp);
 
-                            sampleList.add(new SamplePoint(user_id, mean, variance, avgAbsDiff, resultant, avgTimePeak));
+                            // distance travelled
+                            double distance = computeDistanceTraveled(resultant);
+
+                            sampleList.add(new SamplePoint(user_id, mean, variance, avgAbsDiff, resultant, avgTimePeak, distance, startTime));
 
                         }
                     }
@@ -120,15 +127,15 @@ public class CalculateFeature {
         if (sampleList.size() > 0) {
             System.out.println("Total Samples: " + sampleList.size());
             DataManager.saveDataToMySQL(sampleList);
-        } */
+        }
     }
 
-    public static void lastSeen() {
+    public static Long lastSeen() {
         try {
             String content = new Scanner(new File(lastReadFile)).next();
-            System.out.println(Long.parseLong(content));
+            return Long.parseLong(content);
         } catch(Exception e) {
-            System.out.println(-1);
+            return 0L;
         }
     }
 
