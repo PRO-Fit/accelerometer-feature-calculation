@@ -6,3 +6,5 @@
 .gradle
 /target
 /actitracker
+*.class
+.DS_Store

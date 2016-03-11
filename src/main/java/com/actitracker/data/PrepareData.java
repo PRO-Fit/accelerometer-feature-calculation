@@ -1,6 +1,7 @@
 package com.actitracker.data;
 
 
+import com.datastax.spark.connector.japi.CassandraRow;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
@@ -53,6 +54,36 @@ public class PrepareData {
         }
 
         return results;
+    }
+
+    public static List<Long[]> defineWindows(JavaRDD<Long> times) {
+        // first find jumps to define the continuous periods of data
+        Long firstElement = times.first();
+        Long lastElement = times.sortBy(time -> time, false, 1).first();
+
+        // compute the difference between each timestamp
+        JavaPairRDD<Long[], Long> tsBoundariesDiff = PrepareData.boudariesDiff(times, firstElement, lastElement);
+
+        // define periods of recording
+        // if the difference is greater than 100 000 000, it must be different periods of recording
+        // ({min_boundary, max_boundary}, max_boundary - min_boundary > 100 000 000)
+        JavaPairRDD<Long, Long> jumps = PrepareData.defineJump(tsBoundariesDiff);
+
+        // Now define the intervals
+        return PrepareData.defineInterval(jumps, firstElement, lastElement, Constants.interval);
+    }
+
+    /**
+     * Get data slices based on window interval.
+     * @param data
+     * @param interval
+     * @param j
+     * @return JavaRDD<CassandraRow> - interval data from the jump
+     */
+    public static JavaRDD<CassandraRow> getDataIntervalData(JavaRDD<CassandraRow> data, long interval, int j) {
+        return data.filter(raw ->
+                Long.valueOf(raw.getString("timestamp")) < interval + (j + 1) * Constants.interval && Long.valueOf(raw.getString("timestamp")) > interval + j * Constants.interval
+        );
     }
 
 }
